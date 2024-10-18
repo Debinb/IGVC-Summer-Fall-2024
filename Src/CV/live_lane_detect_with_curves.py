@@ -94,12 +94,22 @@ def region_selection(image):
         ignore_mask_color = 255
     
     rows, cols = image.shape[:2]
-    bottom_left  = [cols * 0.01, rows * 0.95]  # col was 0.1
-    top_left     = [cols * 0.2, rows * 0.40]
-    bottom_right = [cols * 0.99, rows * 0.95]
-    top_right    = [cols * 0.8, rows * 0.40]
-    vertices = np.array([[bottom_left, top_left, bottom_right, top_right]], dtype=np.int32)
+    # bottom_left  = [cols * 0.01, rows * 0.95]  # col was 0.1
+    # top_left     = [cols * 0.2, rows * 0.40]
+    # bottom_right = [cols * 0.99, rows * 0.95]
+    # top_right    = [cols * 0.8, rows * 0.40]
+    # vertices = np.array([[bottom_left, top_left, bottom_right, top_right]], dtype=np.int32)
     
+    ### Changes made only here
+    top_left     = [cols * 0.3, rows * 0.40]
+    top_right    = [cols * 0.7, rows * 0.40]
+    bottom_left  = [cols * 0.1, rows * 0.90]  
+    bottom_right = [cols * 0.9, rows * 0.90]
+    
+    #This order of this array is what defines the shape of the window. Just had to change the order inside the array
+    vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
+
+
     cv2.fillPoly(mask, vertices, ignore_mask_color)
     masked_image = cv2.bitwise_and(image, mask)
     
