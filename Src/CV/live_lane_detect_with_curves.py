@@ -180,7 +180,30 @@ def lane_lines(image, lines):
     right_line = pixel_points(y1, y2, right_lane)
     
     return left_line, right_line
+ 
+ # testing for center
+def get_lane_center(left_line, right_line, image_width):
+    if left_line is None or right_line is None:
+        return image_width / 2  # Default to center if lines aren't detected
+    
+    # Get the midpoint of the lane
+    left_x = (left_line[0][0] + left_line[1][0]) / 2  # Average x-coordinates of left lane
+    right_x = (right_line[0][0] + right_line[1][0]) / 2  # Average x-coordinates of right lane
+    lane_center = (left_x + right_x) / 2
+    
+    return lane_center
 
+def determine_steering_action(lane_center, image_width, tolerance=20):
+    image_center = image_width / 2
+    offset = lane_center - image_center
+
+    if abs(offset) <= tolerance:
+        return "FORWARD"
+    elif offset > tolerance:
+        return "RIGHT"
+    else:
+        return "LEFT"
+# ends here
 
 def draw_lane_lines(image, lines, color=[255, 0, 0], thickness=12):
     """Draw lines onto the input image."""
@@ -206,7 +229,17 @@ def frame_processor(image):
     cv2.imshow('Region of interest with 1st triangle', region)
     cv2.imshow('Region of interest with 2nd triangle',region_diff)
     hough = hough_transform(region)
-    result = draw_lane_lines(image, lane_lines(image, hough))
+    left_line, right_line = lane_lines(image, hough)
+
+    # Determine lane center and decide movement
+    lane_center = get_lane_center(left_line, right_line, image.shape[1])
+    action = determine_steering_action(lane_center, image.shape[1])
+
+    # Send the action command to the ESP32
+    #send_command_to_esp32(action)
+
+    # Draw lane lines for visualization
+    result = draw_lane_lines(image, [left_line, right_line])
     
     return result
 
