@@ -48,7 +48,7 @@ def gray_scale(image):
     """Convert an image to grayscale."""
     return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
-def gaussian_smoothing(image, kernel_size=5):
+def gaussian_smoothing(image, kernel_size=5):   # kernel size was 5
     """Apply Gaussian smoothing to the image."""
     return cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
 
@@ -68,7 +68,6 @@ def canny(image):
     blur =cv2.GaussianBlur(gray,(kernel,kernel),0)
     canny = cv2.Canny(gray,50,150)
     return canny
-
 
 
 ###DEBUG trying to redefined a bigger triangle Nestor 
@@ -94,22 +93,20 @@ def region_selection(image):
         ignore_mask_color = 255
     
     rows, cols = image.shape[:2]
-    # bottom_left  = [cols * 0.01, rows * 0.95]  # col was 0.1
-    # top_left     = [cols * 0.2, rows * 0.40]
-    # bottom_right = [cols * 0.99, rows * 0.95]
-    # top_right    = [cols * 0.8, rows * 0.40]
-    # vertices = np.array([[bottom_left, top_left, bottom_right, top_right]], dtype=np.int32)
+    # bottom_left  = [cols * 0.01, rows * 0.9]  # col was 0.1
+    # top_left     = [cols * 0.35, rows * 0.48]  #It was at cols * 0.2 and rows 0.4
+    # bottom_right = [cols * 0.99, rows * 0.9]
+    # top_right    = [cols * 0.75, rows * 0.48]  #cols 0.8 rows 0.4
+
+    ##TESTING - DEBIN
+    top_left     = [cols * 0.3, rows * 0.4]  #It was at cols * 0.2 and rows 0.4
+    top_right    = [cols * 0.7, rows * 0.4]  #cols 0.8 rows 0.4
+    bottom_left  = [cols * 0.1, rows * 0.9]  # col was 0.1
+    bottom_right = [cols * 0.9, rows * 0.9]
     
-    ### Changes made only here
-    top_left     = [cols * 0.3, rows * 0.40]
-    top_right    = [cols * 0.7, rows * 0.40]
-    bottom_left  = [cols * 0.1, rows * 0.90]  
-    bottom_right = [cols * 0.9, rows * 0.90]
-    
-    #This order of this array is what defines the shape of the window. Just had to change the order inside the array
+    #defines the region
     vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
-
-
+    
     cv2.fillPoly(mask, vertices, ignore_mask_color)
     masked_image = cv2.bitwise_and(image, mask)
     
@@ -119,9 +116,9 @@ def hough_transform(image):
     """Determine lines in the image using the Hough Transform."""
     rho = 1              # Distance resolution of the accumulator in pixels.
     theta = np.pi / 180  # Angle resolution of the accumulator in radians.
-    threshold = 100       # Only lines that are greater than threshold will be returned.
-    minLineLength = 15   # Line segments shorter than that are rejected.
-    maxLineGap = 250     # Maximum allowed gap between points on the same line to link them.
+    threshold = 20       # Only lines that are greater than threshold will be returned. Higher the number, fewer lines detected
+    minLineLength = 20   # Line segments shorter than that are rejected. Minimum length of line to be detected
+    maxLineGap = 300     # Maximum allowed gap between points on the same line to link them. Max gap allowed betweeen the same line to be detected
     lines = cv2.HoughLinesP(image, rho=rho, theta=theta, threshold=threshold,
                              minLineLength=minLineLength, maxLineGap=maxLineGap)
     return lines if lines is not None else []
@@ -180,30 +177,7 @@ def lane_lines(image, lines):
     right_line = pixel_points(y1, y2, right_lane)
     
     return left_line, right_line
- 
- # testing for center
-def get_lane_center(left_line, right_line, image_width):
-    if left_line is None or right_line is None:
-        return image_width / 2  # Default to center if lines aren't detected
-    
-    # Get the midpoint of the lane
-    left_x = (left_line[0][0] + left_line[1][0]) / 2  # Average x-coordinates of left lane
-    right_x = (right_line[0][0] + right_line[1][0]) / 2  # Average x-coordinates of right lane
-    lane_center = (left_x + right_x) / 2
-    
-    return lane_center
 
-def determine_steering_action(lane_center, image_width, tolerance=20):
-    image_center = image_width / 2
-    offset = lane_center - image_center
-
-    if abs(offset) <= tolerance:
-        return "FORWARD"
-    elif offset > tolerance:
-        return "RIGHT"
-    else:
-        return "LEFT"
-# ends here
 
 def draw_lane_lines(image, lines, color=[255, 0, 0], thickness=12):
     """Draw lines onto the input image."""
@@ -224,22 +198,11 @@ def frame_processor(image):
     smooth = gaussian_smoothing(gray)
     edges = canny_detector(smooth)
     region = region_selection(edges)
-    region_diff = region_of_interest(edges)
 
     cv2.imshow('Region of interest with 1st triangle', region)
-    cv2.imshow('Region of interest with 2nd triangle',region_diff)
+    
     hough = hough_transform(region)
-    left_line, right_line = lane_lines(image, hough)
-
-    # Determine lane center and decide movement
-    lane_center = get_lane_center(left_line, right_line, image.shape[1])
-    action = determine_steering_action(lane_center, image.shape[1])
-
-    # Send the action command to the ESP32
-    send_command_to_esp32(action)
-
-    # Draw lane lines for visualization
-    result = draw_lane_lines(image, [left_line, right_line])
+    result = draw_lane_lines(image, lane_lines(image, hough))
     
     return result
 
@@ -253,6 +216,11 @@ def webcam_video_processing():
 
         # Process the frame
         processed_frame = frame_processor(frame)
+
+        #Display resolution of camera for debug- Debin
+        # CamWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        # CamHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        # print(f"Camera Resolution: {CamWidth}x{CamHeight}")
 
         # Display the resulting frame
         cv2.imshow('Lane Detection - White Lines Only', processed_frame)
