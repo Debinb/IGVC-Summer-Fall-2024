@@ -2,7 +2,7 @@
 This project focuses on developing an autonomous vehicle for the Intelligent Ground Vehicle Competition (IGVC). The vehicle integrates lane-keeping and object-avoidance algorithms, coupled with precise motor control, to navigate complex environments.
 
 <p align="center">
-<img src="Documentation/Barbie_Jeep.jpg" width="200">
+<img src="Documentation/Barbie_Jeep.jpg" width="500">
 </p>
 
 ### Features:
